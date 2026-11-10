@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -10,6 +10,9 @@ import { WelcomeService } from './core/services/welcome.service';
 @Component({
   selector: 'app-root',
   imports: [CommonModule, FormsModule],
+  // PERFORMANCE LAB: OnPush - Angular only re-checks this component when one of its inputs
+  // changes, an event fires inside it, or a signal / async pipe it reads emits.
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="max-w-xl mx-auto p-4 bg-gray-50 min-h-screen">
       <header class="text-center mb-8">
