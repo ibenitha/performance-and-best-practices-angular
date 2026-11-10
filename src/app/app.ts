@@ -2,18 +2,18 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { AsyncPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable, catchError, map, of, startWith } from 'rxjs';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { SafeHtmlPipe } from './shared/pipes/safe-html.pipe';
 import { Todo } from './core/models/todo.model';
 import { TodoService } from './core/services/todo.service';
 import { WelcomeService } from './core/services/welcome.service';
 
 // PERFORMANCE LAB: the three states the header can be in while the message loads.
 type WelcomeState =
-  { status: 'loading' } | { status: 'ready'; message: SafeHtml } | { status: 'error' };
+  { status: 'loading' } | { status: 'ready'; message: string } | { status: 'error' };
 
 @Component({
   selector: 'app-root',
-  imports: [FormsModule, AsyncPipe],
+  imports: [FormsModule, AsyncPipe, SafeHtmlPipe],
   // PERFORMANCE LAB: OnPush - Angular only re-checks this component when one of its inputs
   // changes, an event fires inside it, or a signal / async pipe it reads emits.
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,7 +26,8 @@ type WelcomeState =
         <header class="text-center mb-8">
           <h1 class="text-3xl font-extrabold text-gray-800">
             @if (welcome.status === 'ready') {
-              <span [innerHTML]="welcome.message"></span>
+              <!-- PERFORMANCE LAB: the API HTML (which contains a <script>) is sanitized, never bypassed. -->
+              <span [innerHTML]="welcome.message | safeHtml"></span>
             } @else {
               Todo App
             }
@@ -101,7 +102,7 @@ type WelcomeState =
                 (change)="toggleCompleted(todo)"
                 class="form-checkbox h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 mr-4"
               />
-              <span class="text-gray-700" [innerHTML]="todo.description"></span>
+              <span class="text-gray-700" [innerHTML]="todo.description | safeHtml"></span>
             </label>
             <button
               (click)="deleteTask(todo.id)"
@@ -130,7 +131,7 @@ type WelcomeState =
                 (change)="toggleCompleted(todo)"
                 class="form-checkbox h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 mr-4"
               />
-              <span class="text-gray-700 line-through" [innerHTML]="todo.description"></span>
+              <span class="text-gray-700 line-through" [innerHTML]="todo.description | safeHtml"></span>
             </label>
             <button
               (click)="deleteTask(todo.id)"
@@ -178,7 +179,6 @@ type WelcomeState =
   ],
 })
 export class App {
-  private sanitizer = inject(DomSanitizer);
   // PERFORMANCE LAB: state and logic now come from services (Monolithic Refactor).
   private todoService = inject(TodoService);
   private welcomeService = inject(WelcomeService);
@@ -192,7 +192,7 @@ export class App {
   public readonly welcome$: Observable<WelcomeState> = this.welcomeService.welcomeMessage$.pipe(
     map((message): WelcomeState => ({
       status: 'ready',
-      message: this.sanitizer.bypassSecurityTrustHtml(message),
+      message,
     })),
     catchError(() => of<WelcomeState>({ status: 'error' })),
     startWith<WelcomeState>({ status: 'loading' }),

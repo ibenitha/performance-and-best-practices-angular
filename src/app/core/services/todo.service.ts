@@ -41,13 +41,12 @@ export class TodoService {
   // changed items) instead of push() or editing an object in place. A new reference is
   // what lets signals, OnPush and @for's tracking detect the change cheaply.
 
+  // PERFORMANCE LAB: the naive includes('<script>') check was removed - it missed payloads
+  // like <img onerror> and changed the user's text. Descriptions are stored as typed and
+  // sanitized at render time by SafeHtmlPipe.
   public addTask(rawDescription: string): void {
-    let description = rawDescription.trim();
+    const description = rawDescription.trim();
     if (!description) return;
-
-    if (description.toLowerCase().includes('<script>')) {
-      description = `<span style="color: red;">[Script Detected]</span> ` + description;
-    }
 
     const newTodo: Todo = { id: this.nextId++, description, completed: false };
     this.todosState.update((todos) => [...todos, newTodo]);
