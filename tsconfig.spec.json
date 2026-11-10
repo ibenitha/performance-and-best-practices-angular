@@ -4,6 +4,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
+    // PERFORMANCE LAB: explicit rootDir (required by newer TypeScript versions)
+    "rootDir": "./src",
     "types": [
       "jasmine"
     ]
