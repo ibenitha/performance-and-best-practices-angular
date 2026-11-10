@@ -1,36 +1,45 @@
-import { Injectable } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import { Todo, TodoStats } from '../models/todo.model';
 
 /**
  * PERFORMANCE LAB: Monolithic Refactor.
- * All to-do state and business logic moved out of the component into this service,
- * so the component only displays data and forwards user actions.
+ * All to-do state and business logic lives here, so components only display data
+ * and forward user actions.
  */
 @Injectable({ providedIn: 'root' })
 export class TodoService {
-  public todos: Todo[] = [
+  // PERFORMANCE LAB: State Conversion - the list is a signal. Only this service can write it;
+  // components get a read-only view, so every change goes through the methods below.
+  private readonly todosState = signal<Todo[]>([
     { id: 1, description: 'Build a project', completed: false },
     { id: 2, description: 'Learn React', completed: true },
-  ];
+  ]);
+  public readonly todos = this.todosState.asReadonly();
+
   private nextId = 3;
 
-  public getStats(): TodoStats {
-    const total = this.todos.length;
-    const completed = this.todos.filter((t) => t.completed).length;
-    const pending = total - completed;
+  // PERFORMANCE LAB: Optimize Template Update - derived state uses computed().
+  // Each value is memoised: it is recalculated only when `todos` changes, not on every
+  // change detection pass like the old getStats() method (called 9 times per check).
+  public readonly activeTodos = computed(() => this.todos().filter((t) => !t.completed));
+  public readonly completedTodos = computed(() => this.todos().filter((t) => t.completed));
 
-    for (let i = 0; i < 10000; i++) {}
+  public readonly stats = computed<TodoStats>(() => {
+    const total = this.todos().length;
+    const completed = this.completedTodos().length;
+    return { total, completed, pending: total - completed };
+  });
 
-    return { total, completed, pending };
-  }
+  /** Whole-number percentage of completed tasks (0-100). */
+  public readonly progress = computed(() => {
+    const { total, completed } = this.stats();
+    return total === 0 ? 0 : Math.round((completed / total) * 100);
+  });
 
-  public getProgressPercentage(): string {
-    const stats = this.getStats();
-    if (stats.total === 0) return '0%';
-
-    const percentage = Math.round((stats.completed / stats.total) * 100);
-    return `${percentage}%`;
-  }
+  // PERFORMANCE LAB: Improve the Methods Reactivity - every update is immutable.
+  // update() receives the current array and returns a NEW array (and new objects for
+  // changed items) instead of push() or editing an object in place. A new reference is
+  // what lets signals, OnPush and @for's tracking detect the change cheaply.
 
   public addTask(rawDescription: string): void {
     let description = rawDescription.trim();
@@ -40,18 +49,17 @@ export class TodoService {
       description = `<span style="color: red;">[Script Detected]</span> ` + description;
     }
 
-    this.todos.push({ id: this.nextId++, description, completed: false });
+    const newTodo: Todo = { id: this.nextId++, description, completed: false };
+    this.todosState.update((todos) => [...todos, newTodo]);
   }
 
   public toggleCompleted(id: number): void {
-    const index = this.todos.findIndex((t) => t.id === id);
-    if (index !== -1) {
-      this.todos[index].completed = !this.todos[index].completed;
-      this.todos = [...this.todos];
-    }
+    this.todosState.update((todos) =>
+      todos.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+    );
   }
 
   public deleteTask(id: number): void {
-    this.todos = this.todos.filter((t) => t.id !== id);
+    this.todosState.update((todos) => todos.filter((t) => t.id !== id));
   }
 }
