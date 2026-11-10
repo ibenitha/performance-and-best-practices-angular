@@ -1,8 +1,11 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable, Subscription, of } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Todo, TodoStats } from './core/models/todo.model';
+import { TodoService } from './core/services/todo.service';
+import { WelcomeService } from './core/services/welcome.service';
 
 @Component({
   selector: 'app-root',
@@ -159,32 +162,22 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 })
 export class App implements OnInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
+  // PERFORMANCE LAB: state and logic now come from services (Monolithic Refactor).
+  private todoService = inject(TodoService);
+  private welcomeService = inject(WelcomeService);
 
-  public todos: any = [];
   public newTaskDescription: string = '';
   public welcomeMessage: SafeHtml = 'Todo App';
-  private nextId: number = 3;
 
   private welcomeSub: Subscription | undefined;
 
-  constructor() {
-    console.log('App component initialized (Monolithic Structure)');
-  }
-
-  private simulateFetchWelcomeMessage(): Observable<string> {
-    console.log('API Call: Fetching welcome message (no caching)');
-    return of(
-      '<span style="color: #4f46e5; font-weight: bold;">My Refactoring App (Sanitized)</span><script>console.warn("SECURITY WARNING: XSS vulnerability active in header!");</script>'
-    );
+  // PERFORMANCE LAB: the component reads the list from the service instead of owning it.
+  public get todos(): Todo[] {
+    return this.todoService.todos;
   }
 
   ngOnInit(): void {
-    this.todos = [
-      { id: 1, description: 'Build a project', completed: false },
-      { id: 2, description: 'Learn React', completed: true },
-    ];
-
-    this.welcomeSub = this.simulateFetchWelcomeMessage().subscribe((message: string) => {
+    this.welcomeSub = this.welcomeService.fetchWelcomeMessage().subscribe((message: string) => {
       this.welcomeMessage = this.sanitizer.bypassSecurityTrustHtml(message);
     });
   }
@@ -196,54 +189,26 @@ export class App implements OnInit, OnDestroy {
     }
   }
 
-  public getStats(): { total: number; completed: number; pending: number } {
-    const total = this.todos.length;
-    const completed = this.todos.filter((t: any) => t.completed).length;
-    const pending = total - completed;
-
-    for (let i = 0; i < 10000; i++) {}
-
-    return { total, completed, pending };
+  // PERFORMANCE LAB: thin delegates so the template stays the same in this step.
+  public getStats(): TodoStats {
+    return this.todoService.getStats();
   }
 
   public getProgressPercentage(): string {
-    const stats = this.getStats();
-    if (stats.total === 0) return '0%';
-
-    const percentage = Math.round((stats.completed / stats.total) * 100);
-    return `${percentage}%`;
+    return this.todoService.getProgressPercentage();
   }
 
   public addTask(): void {
-    if (!this.newTaskDescription.trim()) {
-      return;
-    }
-
-    let description = this.newTaskDescription.trim();
-    if (description.toLowerCase().includes('<script>')) {
-      description = `<span style="color: red;">[Script Detected]</span> ` + description;
-    }
-
-    const newTodo: any = {
-      id: this.nextId++,
-      description: description,
-      completed: false,
-    };
-
-    this.todos.push(newTodo);
+    this.todoService.addTask(this.newTaskDescription);
     this.newTaskDescription = '';
   }
 
-  public toggleCompleted(todo: any): void {
-    const index = this.todos.findIndex((t: any) => t.id === todo.id);
-    if (index !== -1) {
-      this.todos[index].completed = !this.todos[index].completed;
-      this.todos = [...this.todos];
-    }
+  public toggleCompleted(todo: Todo): void {
+    this.todoService.toggleCompleted(todo.id);
   }
 
   public deleteTask(id: number): void {
-    this.todos = this.todos.filter((t: any) => t.id !== id);
+    this.todoService.deleteTask(id);
   }
 
   public trackByFn(index: number, todo: any): any {
