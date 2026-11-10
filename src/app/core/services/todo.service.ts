@@ -12,7 +12,7 @@ export class TodoService {
   // components get a read-only view, so every change goes through the methods below.
   private readonly todosState = signal<Todo[]>([
     { id: 1, description: 'Build a project', completed: false },
-    { id: 2, description: 'Learn React', completed: true },
+    { id: 2, description: 'Learn Angular signals', completed: true },
   ]);
   public readonly todos = this.todosState.asReadonly();
 

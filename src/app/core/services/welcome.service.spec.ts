@@ -28,6 +28,6 @@ describe('WelcomeService', () => {
 
     expect(callApiSpy).toHaveBeenCalledTimes(1);
     expect(received.length).toBe(3);
-    expect(received[0]).toContain('My Refactoring App');
+    expect(received[0]).toContain('Welcome back');
   }));
 });

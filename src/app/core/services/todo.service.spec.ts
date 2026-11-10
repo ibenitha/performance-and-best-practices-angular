@@ -15,7 +15,7 @@ describe('TodoService', () => {
     expect(service.stats()).toEqual({ total: 2, completed: 1, pending: 1 });
     expect(service.progress()).toBe(50);
     expect(service.activeTodos().map((t) => t.description)).toEqual(['Build a project']);
-    expect(service.completedTodos().map((t) => t.description)).toEqual(['Learn React']);
+    expect(service.completedTodos().map((t) => t.description)).toEqual(['Learn Angular signals']);
   });
 
   it('adds a trimmed task and ignores blank input', () => {

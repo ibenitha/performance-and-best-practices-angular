@@ -41,7 +41,7 @@ import { FormsModule } from '@angular/forms';
         </p>
       } @else {
         <p id="new-task-hint" class="mt-2 text-xs text-slate-600">
-          HTML is allowed but sanitized. Try &lt;b&gt;bold&lt;/b&gt; or a &lt;script&gt; tag.
+          You can use simple formatting like &lt;b&gt;bold&lt;/b&gt;. Unsafe HTML is removed automatically.
         </p>
       }
     </form>

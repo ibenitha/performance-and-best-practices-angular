@@ -8,7 +8,7 @@ body {
 }
 
 /* PERFORMANCE LAB: visible keyboard focus on every interactive element. */
-:where(a, button, input, select, textarea, label, [tabindex]):focus-visible {
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 3px solid var(--color-indigo-700);
   outline-offset: 2px;
 }

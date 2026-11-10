@@ -1,5 +1,23 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { throwError } from 'rxjs';
 import { App } from './app';
+import { WelcomeService } from './core/services/welcome.service';
+
+// PERFORMANCE LAB: error state when the simulated API fails.
+describe('App (API error)', () => {
+  it('announces an error with role="alert" and still shows the tasks', () => {
+    TestBed.configureTestingModule({
+      imports: [App],
+      providers: [{ provide: WelcomeService, useValue: { welcomeMessage$: throwError(() => new Error('offline')) } }],
+    });
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+
+    expect(el.querySelector('[role=alert]')?.textContent).toContain("Couldn't load the welcome message");
+    expect(el.textContent).toContain('Build a project');
+  });
+});
 
 // PERFORMANCE LAB: integration tests for the container component.
 describe('App', () => {
@@ -14,15 +32,17 @@ describe('App', () => {
 
   it('shows a loading status, then the sanitized welcome message', fakeAsync(() => {
     fixture.detectChanges();
-    expect(el.querySelector('[role=status]')?.textContent).toContain('Loading welcome message');
+    expect(el.querySelectorAll('h1').length).toBe(1);
+    expect(el.querySelector('h1')!.textContent).toContain('To-Do App');
+    expect(el.querySelector('[role=status]')?.textContent).toContain('Loading your welcome message');
 
     tick(600);
     fixture.detectChanges();
 
-    const h1 = el.querySelector('h1')!;
-    expect(el.querySelectorAll('h1').length).toBe(1);
-    expect(h1.textContent).toContain('My Refactoring App');
-    expect(h1.querySelector('script')).toBeNull(); // XSS payload stripped
+    const header = el.querySelector('header')!;
+    expect(header.textContent).toContain('Welcome back!');
+    expect(header.querySelector('strong')).not.toBeNull(); // safe markup kept
+    expect(header.querySelector('script')).toBeNull(); // XSS payload stripped
     expect(el.querySelector('[role=status]')).toBeNull();
   }));
 

@@ -31,31 +31,27 @@ type WelcomeState =
       <!-- PERFORMANCE LAB: RxJS Subscription Fix - the async pipe subscribes when the view is
            created, marks the OnPush view for check on each emission, and unsubscribes
            automatically when the view is destroyed. No manual subscribe/unsubscribe. -->
-      @if (welcome$ | async; as welcome) {
-        <header class="mb-8 text-center">
-          <h1 class="text-3xl font-extrabold tracking-tight text-indigo-700 sm:text-4xl">
-            @if (welcome.status === 'ready') {
-              <!-- PERFORMANCE LAB: the API HTML (which contains a script tag) is sanitized, never bypassed. -->
-              <span [innerHTML]="welcome.message | safeHtml"></span>
-            } @else {
-              Todo App
-            }
-          </h1>
-          <p class="mt-2 text-slate-600">A to-do app refactored for performance</p>
+      <header class="mb-8 text-center">
+        <!-- One stable h1; the welcome line below it comes from the simulated API. -->
+        <h1 class="text-3xl font-extrabold tracking-tight text-indigo-700 sm:text-4xl">To-Do App</h1>
 
-          <!-- Loading and error states for the simulated API call. -->
-          @if (welcome.status === 'loading') {
-            <p role="status" class="mt-3 inline-flex items-center gap-2 text-sm text-slate-600">
+        @if (welcome$ | async; as welcome) {
+          <!-- Loading, ready and error states for the simulated API call. -->
+          @if (welcome.status === 'ready') {
+            <!-- PERFORMANCE LAB: the API HTML (which contains a script tag) is sanitized, never bypassed. -->
+            <p class="mt-2 text-slate-600" [innerHTML]="welcome.message | safeHtml"></p>
+          } @else if (welcome.status === 'loading') {
+            <p role="status" class="mt-2 inline-flex items-center gap-2 text-slate-600">
               <span aria-hidden="true" class="size-2 rounded-full bg-indigo-500 motion-safe:animate-pulse"></span>
-              Loading welcome message…
+              Loading your welcome message…
             </p>
-          } @else if (welcome.status === 'error') {
-            <p role="alert" class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
-              Couldn't load the welcome message. Showing the default title.
+          } @else {
+            <p role="alert" class="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+              Couldn't load the welcome message. Your tasks are still available.
             </p>
           }
-        </header>
-      }
+        }
+      </header>
 
       <!-- PERFORMANCE LAB: dumb components; data goes down as inputs, events come up as outputs. -->
       <app-todo-form [(description)]="newTaskDescription" (add)="addTask($event)" />

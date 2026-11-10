@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, isDevMode } from '@angular/core';
 import { Observable, defer, delay, of, shareReplay } from 'rxjs';
 
 /**
@@ -22,10 +22,14 @@ export class WelcomeService {
 
   /** The simulated HTTP request. Protected so the unit test can count calls. */
   protected callApi(): Observable<string> {
-    console.log('API Call: Fetching welcome message (runs once, cached with shareReplay)');
-    // PERFORMANCE LAB: delay() simulates network latency so the loading state is visible.
+    if (isDevMode()) {
+      console.log('API Call: Fetching welcome message (runs once, cached with shareReplay)');
+    }
+    // PERFORMANCE LAB: the response deliberately contains a <script> to show the sanitizer
+    // at work: <strong> is kept, the script is stripped. delay() simulates network latency
+    // so the loading state is visible.
     return of(
-      '<span style="color: #4f46e5; font-weight: bold;">My Refactoring App (Sanitized)</span><script>console.warn("SECURITY WARNING: XSS vulnerability active in header!");</script>'
+      `<strong>Welcome back!</strong> Here's what's on your list today.<script>console.warn("XSS: this script should never run");</script>`
     ).pipe(delay(600));
   }
 }
