@@ -1,30 +1,46 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  OnDestroy,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import { Observable, catchError, map, of, startWith } from 'rxjs';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Todo } from './core/models/todo.model';
 import { TodoService } from './core/services/todo.service';
 import { WelcomeService } from './core/services/welcome.service';
 
+// PERFORMANCE LAB: the three states the header can be in while the message loads.
+type WelcomeState =
+  | { status: 'loading' }
+  | { status: 'ready'; message: SafeHtml }
+  | { status: 'error' };
+
 @Component({
   selector: 'app-root',
-  imports: [FormsModule],
+  imports: [FormsModule, AsyncPipe],
   // PERFORMANCE LAB: OnPush - Angular only re-checks this component when one of its inputs
   // changes, an event fires inside it, or a signal / async pipe it reads emits.
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="max-w-xl mx-auto p-4 bg-gray-50 min-h-screen">
+      <!-- PERFORMANCE LAB: RxJS Subscription Fix - the async pipe subscribes when the view is
+           created, marks the OnPush view for check on each emission, and unsubscribes
+           automatically when the view is destroyed. No manual subscribe/unsubscribe. -->
+      @if (welcome$ | async; as welcome) {
       <header class="text-center mb-8">
-        <h1 class="text-3xl font-extrabold text-gray-800" [innerHTML]="welcomeMessage"></h1>
+        <h1 class="text-3xl font-extrabold text-gray-800">
+          @if (welcome.status === 'ready') {
+          <span [innerHTML]="welcome.message"></span>
+          } @else {
+          Todo App
+          }
+        </h1>
         <p class="text-gray-500 mt-1">A legacy app built for refactoring practice</p>
+        @if (welcome.status === 'loading') {
+        <p role="status" class="text-sm text-gray-500 mt-2">Loading welcome message…</p>
+        } @else if (welcome.status === 'error') {
+        <p role="alert" class="text-sm text-red-600 mt-2">Couldn't load the welcome message.</p>
+        }
       </header>
+      }
 
       <div class="flex mb-8">
         <input
@@ -165,7 +181,7 @@ import { WelcomeService } from './core/services/welcome.service';
     `,
   ],
 })
-export class App implements OnInit, OnDestroy {
+export class App {
   private sanitizer = inject(DomSanitizer);
   // PERFORMANCE LAB: state and logic now come from services (Monolithic Refactor).
   private todoService = inject(TodoService);
@@ -174,9 +190,19 @@ export class App implements OnInit, OnDestroy {
   // PERFORMANCE LAB: State Conversion - the input text is a signal; [(ngModel)] reads and
   // writes it directly.
   public readonly newTaskDescription = signal('');
-  public welcomeMessage: SafeHtml = 'Todo App';
-
-  private welcomeSub: Subscription | undefined;
+  // PERFORMANCE LAB: RxJS Subscription Fix - a declarative stream the template reads with
+  // the async pipe. startWith gives the loading state; catchError turns a failure into the
+  // error state instead of breaking the stream.
+  public readonly welcome$: Observable<WelcomeState> = this.welcomeService
+    .fetchWelcomeMessage()
+    .pipe(
+      map((message): WelcomeState => ({
+        status: 'ready',
+        message: this.sanitizer.bypassSecurityTrustHtml(message),
+      })),
+      catchError(() => of<WelcomeState>({ status: 'error' })),
+      startWith<WelcomeState>({ status: 'loading' })
+    );
 
   // PERFORMANCE LAB: read-only signals from the service. The template calls them like
   // stats(), and OnPush re-renders only when one of them actually changes.
@@ -184,19 +210,6 @@ export class App implements OnInit, OnDestroy {
   public readonly completedTodos = this.todoService.completedTodos;
   public readonly stats = this.todoService.stats;
   public readonly progress = this.todoService.progress;
-
-  ngOnInit(): void {
-    this.welcomeSub = this.welcomeService.fetchWelcomeMessage().subscribe((message: string) => {
-      this.welcomeMessage = this.sanitizer.bypassSecurityTrustHtml(message);
-    });
-  }
-
-  ngOnDestroy(): void {
-    if (this.welcomeSub) {
-      this.welcomeSub.unsubscribe();
-      console.log('RxJS: Welcome message manually unsubscribed in ngOnDestroy.');
-    }
-  }
 
   public addTask(): void {
     this.todoService.addTask(this.newTaskDescription());
