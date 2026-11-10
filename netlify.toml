@@ -1,0 +1,13 @@
+# PERFORMANCE LAB: Netlify build settings
+[build]
+  command = "npm run build"
+  publish = "dist/performance-and-best-practices-angular/browser"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Single-page app: serve index.html for every route
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
