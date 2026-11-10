@@ -41,3 +41,7 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# PERFORMANCE LAB: local-only study notes (never pushed)
+LAB-NOTES.md
+REVIEW-GUIDE-*.md
