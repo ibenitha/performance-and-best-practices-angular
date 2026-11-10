@@ -9,9 +9,7 @@ import { WelcomeService } from './core/services/welcome.service';
 
 // PERFORMANCE LAB: the three states the header can be in while the message loads.
 type WelcomeState =
-  | { status: 'loading' }
-  | { status: 'ready'; message: SafeHtml }
-  | { status: 'error' };
+  { status: 'loading' } | { status: 'ready'; message: SafeHtml } | { status: 'error' };
 
 @Component({
   selector: 'app-root',
@@ -25,21 +23,21 @@ type WelcomeState =
            created, marks the OnPush view for check on each emission, and unsubscribes
            automatically when the view is destroyed. No manual subscribe/unsubscribe. -->
       @if (welcome$ | async; as welcome) {
-      <header class="text-center mb-8">
-        <h1 class="text-3xl font-extrabold text-gray-800">
-          @if (welcome.status === 'ready') {
-          <span [innerHTML]="welcome.message"></span>
-          } @else {
-          Todo App
+        <header class="text-center mb-8">
+          <h1 class="text-3xl font-extrabold text-gray-800">
+            @if (welcome.status === 'ready') {
+              <span [innerHTML]="welcome.message"></span>
+            } @else {
+              Todo App
+            }
+          </h1>
+          <p class="text-gray-500 mt-1">A legacy app built for refactoring practice</p>
+          @if (welcome.status === 'loading') {
+            <p role="status" class="text-sm text-gray-500 mt-2">Loading welcome message…</p>
+          } @else if (welcome.status === 'error') {
+            <p role="alert" class="text-sm text-red-600 mt-2">Couldn't load the welcome message.</p>
           }
-        </h1>
-        <p class="text-gray-500 mt-1">A legacy app built for refactoring practice</p>
-        @if (welcome.status === 'loading') {
-        <p role="status" class="text-sm text-gray-500 mt-2">Loading welcome message…</p>
-        } @else if (welcome.status === 'error') {
-        <p role="alert" class="text-sm text-red-600 mt-2">Couldn't load the welcome message.</p>
-        }
-      </header>
+        </header>
       }
 
       <div class="flex mb-8">
@@ -114,13 +112,11 @@ type WelcomeState =
           </div>
         }
         @if (stats().pending === 0 && stats().total > 0) {
-        <div class="text-center text-gray-500 p-4">All caught up!</div>
+          <div class="text-center text-gray-500 p-4">All caught up!</div>
         }
       </div>
 
-      <h2 class="text-xl font-semibold text-gray-800 mb-4">
-        Completed ({{ stats().completed }})
-      </h2>
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">Completed ({{ stats().completed }})</h2>
       <div class="space-y-3">
         <!-- PERFORMANCE LAB: same keyed loop for the completed list. -->
         @for (todo of completedTodos(); track todo.id) {
@@ -145,7 +141,7 @@ type WelcomeState =
           </div>
         }
         @if (stats().completed === 0 && stats().total > 0) {
-        <div class="text-center text-gray-500 p-4">No completed tasks yet.</div>
+          <div class="text-center text-gray-500 p-4">No completed tasks yet.</div>
         }
       </div>
     </div>
@@ -193,16 +189,14 @@ export class App {
   // PERFORMANCE LAB: RxJS Subscription Fix - a declarative stream the template reads with
   // the async pipe. startWith gives the loading state; catchError turns a failure into the
   // error state instead of breaking the stream.
-  public readonly welcome$: Observable<WelcomeState> = this.welcomeService
-    .fetchWelcomeMessage()
-    .pipe(
-      map((message): WelcomeState => ({
-        status: 'ready',
-        message: this.sanitizer.bypassSecurityTrustHtml(message),
-      })),
-      catchError(() => of<WelcomeState>({ status: 'error' })),
-      startWith<WelcomeState>({ status: 'loading' })
-    );
+  public readonly welcome$: Observable<WelcomeState> = this.welcomeService.welcomeMessage$.pipe(
+    map((message): WelcomeState => ({
+      status: 'ready',
+      message: this.sanitizer.bypassSecurityTrustHtml(message),
+    })),
+    catchError(() => of<WelcomeState>({ status: 'error' })),
+    startWith<WelcomeState>({ status: 'loading' }),
+  );
 
   // PERFORMANCE LAB: read-only signals from the service. The template calls them like
   // stats(), and OnPush re-renders only when one of them actually changes.
