@@ -89,23 +89,26 @@ docs/profiler/                     before / after measurements and screenshots
 
 ## Performance: before vs after
 
-Measured with Angular's profiler hook and Angular DevTools in development mode.
+The same actions were recorded on the legacy app and on the refactored app, with live counts
+from Angular's profiler API (`ng.ɵsetProfiler`, the hook Angular DevTools uses), in development mode.
 Full details: [baseline](docs/profiler/baseline.md) and [after refactor](docs/profiler/after-refactor.md).
 
 | Action | Before | After |
 | --- | --- | --- |
-| Move the mouse over the app | 0 change detection runs | 0 change detection runs |
-| Type one character | Whole app checked, `getStats()` called 18 times (180,000 loop iterations) | Only `App` and `TodoForm` checked, no stats recalculated |
-| Tick a checkbox | Whole app checked, 18 `getStats()` calls | Summary, both lists and the moved row checked once; stats computed once |
-| Welcome API call | Once per subscriber | Once in total |
+| Move the mouse over the app | 0 runs | 0 runs |
+| Type 5 characters | 5 runs: App ×10, 40 `*ngFor` rows, 20 `*ngIf` blocks, **90 `getStats()` calls** (900,000 loop iterations) | 5 runs: only App ×5 and TodoForm ×5, **no stats recalculated** |
+| Press Enter to add a task | 2 runs, whole template, 36 `getStats()` calls | 2 runs: summary once, lists, only the new row |
+| Tick a checkbox | 2 runs, whole template, 36 `getStats()` calls | 1 run: summary once, lists, only the moved row |
+| Welcome API call | Once per subscriber | Once in total (`shareReplay`) |
 
-Mouse movement never triggered change detection (no `mousemove` listeners). The big win is the
-work done in each run: OnPush skips unchanged components and `computed()` returns cached values.
+**What improved:** the work done in each change detection run. OnPush skips every component whose
+inputs and signals did not change, `computed()` returns cached values, and `@for` with `track`
+reuses existing rows. Mouse movement never triggered change detection in either version, because
+nothing listens for `mousemove`.
 
 | Before | After |
 | --- | --- |
-| ![Angular DevTools profiler before](docs/profiler/before-angular-devtools.png) | ![Angular DevTools profiler after](docs/profiler/after-angular-devtools.png) |
-| ![Chrome Performance before](docs/profiler/before-chrome-performance.png) | ![Chrome Performance after](docs/profiler/after-chrome-performance.png) |
+| ![Profiler counts for the legacy app](docs/profiler/before-profiler.jpg) | ![Profiler counts for the refactored app](docs/profiler/after-profiler.jpg) |
 
 ## Accessibility
 
@@ -125,13 +128,13 @@ scrolling. The input and button stack on small screens, and long task names wrap
 
 ## Testing
 
-30 unit tests cover:
+31 unit tests cover:
 
 - `TodoService`: signals, `computed()` memoisation, immutable add / toggle / delete
 - `WelcomeService`: the API runs once for multiple and late subscribers
 - `SafeHtmlPipe`: strips `<script>`, `onerror` and `javascript:` URLs, keeps safe tags
 - Components: inputs, outputs, empty states, validation and accessible names
-- `App`: loading state, sanitized header and adding a task
+- `App`: loading and error states, sanitized welcome message and adding a task
 
 ```bash
 npx ng test --watch=false
