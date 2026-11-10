@@ -1,2 +1,14 @@
 /* You can add global styles to this file, and also import other style files */
 @import "tailwindcss";
+
+/* PERFORMANCE LAB: page background and base text colour (Tailwind v4 colour variables). */
+body {
+  background-color: var(--color-slate-50);
+  color: var(--color-slate-900);
+}
+
+/* PERFORMANCE LAB: visible keyboard focus on every interactive element. */
+:where(a, button, input, select, textarea, label, [tabindex]):focus-visible {
+  outline: 3px solid var(--color-indigo-700);
+  outline-offset: 2px;
+}
