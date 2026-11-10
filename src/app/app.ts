@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -9,7 +8,7 @@ import { WelcomeService } from './core/services/welcome.service';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   // PERFORMANCE LAB: OnPush - Angular only re-checks this component when one of its inputs
   // changes, an event fires inside it, or a signal / async pipe it reads emits.
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,9 +66,12 @@ import { WelcomeService } from './core/services/welcome.service';
 
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Active ({{ getStats().pending }})</h2>
       <div class="space-y-3 mb-8">
-        <ng-container *ngFor="let todo of todos">
+        <!-- PERFORMANCE LAB: @for + track replaces *ngFor + trackBy. Angular keys each row by
+             todo.id, so when the array is replaced only the rows that really changed are
+             re-created in the DOM. -->
+        @for (todo of todos; track todo.id) {
+          @if (!todo.completed) {
           <div
-            *ngIf="!todo.completed"
             class="flex items-center justify-between bg-white p-4 rounded-xl shadow-md transition duration-150 border border-gray-100 hover:shadow-lg"
           >
             <label class="flex items-center cursor-pointer flex-grow">
@@ -88,22 +90,21 @@ import { WelcomeService } from './core/services/welcome.service';
               Delete
             </button>
           </div>
-        </ng-container>
-        <div
-          *ngIf="getStats().pending === 0 && getStats().total > 0"
-          class="text-center text-gray-500 p-4"
-        >
-          All caught up!
-        </div>
+          }
+        }
+        @if (getStats().pending === 0 && getStats().total > 0) {
+        <div class="text-center text-gray-500 p-4">All caught up!</div>
+        }
       </div>
 
       <h2 class="text-xl font-semibold text-gray-800 mb-4">
         Completed ({{ getStats().completed }})
       </h2>
       <div class="space-y-3">
-        <ng-container *ngFor="let todo of todos">
+        <!-- PERFORMANCE LAB: same keyed loop for the completed list. -->
+        @for (todo of todos; track todo.id) {
+          @if (todo.completed) {
           <div
-            *ngIf="todo.completed"
             class="flex items-center justify-between bg-white p-4 rounded-xl shadow-md transition duration-150 border border-gray-100 opacity-70"
           >
             <label class="flex items-center cursor-pointer flex-grow">
@@ -122,13 +123,11 @@ import { WelcomeService } from './core/services/welcome.service';
               Delete
             </button>
           </div>
-        </ng-container>
-        <div
-          *ngIf="getStats().completed === 0 && getStats().total > 0"
-          class="text-center text-gray-500 p-4"
-        >
-          No completed tasks yet.
-        </div>
+          }
+        }
+        @if (getStats().completed === 0 && getStats().total > 0) {
+        <div class="text-center text-gray-500 p-4">No completed tasks yet.</div>
+        }
       </div>
     </div>
   `,
@@ -212,9 +211,5 @@ export class App implements OnInit, OnDestroy {
 
   public deleteTask(id: number): void {
     this.todoService.deleteTask(id);
-  }
-
-  public trackByFn(index: number, todo: any): any {
-    return todo;
   }
 }
